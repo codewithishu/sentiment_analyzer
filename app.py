@@ -1,12 +1,13 @@
 import nltk
 import string
+import os
 import streamlit as st
 from nltk.corpus import movie_reviews, stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
-import os
+# ── NLTK Downloads ─────────────────────────────────────
 nltk_data_path = os.path.join(os.path.expanduser("~"), "nltk_data")
 os.makedirs(nltk_data_path, exist_ok=True)
 nltk.download('movie_reviews', download_dir=nltk_data_path, quiet=True)
@@ -190,17 +191,62 @@ div[data-testid="stTextArea"] textarea:focus {
     background: linear-gradient(90deg, #a0a8ff, #ff6b9d) !important;
     border-radius: 100px !important;
 }
-
-div[data-testid="stSpinner"] {
-    color: #a0a8ff !important;
-}
 </style>
 """, unsafe_allow_html=True)
+
+# ── Slang Dictionary ───────────────────────────────────
+slang_dict = {
+    "gud": "good", "gr8": "great", "amazng": "amazing",
+    "amzing": "amazing", "awsm": "awesome",
+    "luv": "love", "lv": "love", "lyf": "life",
+    "ths": "this", "dis": "this", "dat": "that",
+    "wid": "with", "wit": "with", "u": "you",
+    "ur": "your", "r": "are", "wat": "what",
+    "wut": "what", "cnt": "cant", "cant": "cannot",
+    "wont": "will not", "dont": "do not",
+    "doesnt": "does not", "didnt": "did not",
+    "isnt": "is not", "wasnt": "was not",
+    "superb": "superb", "brilliant": "brilliant",
+    "fantastic": "fantastic", "outstanding": "outstanding",
+    "excellent": "excellent", "perfect": "perfect",
+    "beautiful": "beautiful", "best": "best",
+    "fav": "favorite", "favourite": "favorite",
+    "omg": "amazing", "lol": "funny", "haha": "funny",
+    "meh": "average", "ok": "okay", "okk": "okay",
+    "nope": "no", "yep": "yes", "yup": "yes",
+    "timepass": "average", "bakwaas": "bad",
+    "bekar": "bad", "faltu": "bad", "ganda": "bad",
+    "accha": "good", "badhiya": "good",
+    "zabardast": "excellent", "mast": "great",
+    "bindaas": "great", "solid": "great",
+    "fire": "excellent", "lit": "excellent",
+    "goat": "greatest", "banger": "excellent",
+    "mid": "average", "lowkey": "somewhat",
+    "highkey": "very", "slaps": "excellent",
+    "no cap": "honestly", "bussin": "excellent",
+    "slay": "excellent",
+}
 
 # ── Train Model ────────────────────────────────────────
 @st.cache_resource
 def train_model():
     import pandas as pd
+
+    stop_words = set(stopwords.words('english'))
+
+    def correct_slang(text):
+        words = text.lower().split()
+        corrected = [slang_dict.get(word, word) for word in words]
+        return ' '.join(corrected)
+
+    def clean_text(text):
+        text = correct_slang(text)
+        text = text.lower()
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        tokens = text.split()
+        tokens = [w for w in tokens if w not in stop_words]
+        return ' '.join(tokens)
+
     documents = []
     for category in movie_reviews.categories():
         for fileid in movie_reviews.fileids(category):
@@ -209,23 +255,19 @@ def train_model():
 
     df = pd.DataFrame(documents, columns=['review', 'sentiment'])
     df['sentiment'] = df['sentiment'].map({'pos': 1, 'neg': 0})
-
-    stop_words = set(stopwords.words('english'))
-
-    def clean_text(text):
-        text = text.lower()
-        text = text.translate(str.maketrans('', '', string.punctuation))
-        tokens = text.split()
-        tokens = [w for w in tokens if w not in stop_words]
-        return ' '.join(tokens)
-
     df['clean_review'] = df['review'].apply(clean_text)
+
     tfidf = TfidfVectorizer(max_features=5000)
     X = tfidf.fit_transform(df['clean_review'])
     y = df['sentiment']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
     model = LogisticRegression(max_iter=1000)
     model.fit(X_train, y_train)
+
     return model, tfidf, clean_text
 
 # ── Hero Section ───────────────────────────────────────
@@ -275,7 +317,8 @@ if analyze:
             <div class="result-box-pos">
                 <div class="result-emoji">😊</div>
                 <div class="result-label-pos">POSITIVE SENTIMENT</div>
-                <div class="confidence-text">confidence score — <span class="conf-value">{confidence:.1f}%</span></div>
+                <div class="confidence-text">confidence score —
+                <span class="conf-value">{confidence:.1f}%</span></div>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -283,11 +326,13 @@ if analyze:
             <div class="result-box-neg">
                 <div class="result-emoji">😞</div>
                 <div class="result-label-neg">NEGATIVE SENTIMENT</div>
-                <div class="confidence-text">confidence score — <span class="conf-value">{confidence:.1f}%</span></div>
+                <div class="confidence-text">confidence score —
+                <span class="conf-value">{confidence:.1f}%</span></div>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown('<div class="section-label">Prediction Breakdown</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">Prediction Breakdown</div>',
+                    unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
             st.markdown(f"**Positive** — {pos_score:.1f}%")
@@ -297,13 +342,14 @@ if analyze:
             st.progress(int(neg_score))
 
 # ── Examples ───────────────────────────────────────────
-st.markdown('<div class="example-label">Quick Test Examples</div>', unsafe_allow_html=True)
+st.markdown('<div class="example-label">Quick Test Examples</div>',
+            unsafe_allow_html=True)
 
 examples = [
     "Absolutely brilliant film. Every scene was pure magic.",
     "Terrible movie. Boring plot, bad acting. Total waste.",
-    "Great visuals but the story was weak and predictable.",
-    "One of the best movies I have seen in years. Masterpiece!"
+    "gud movie luv it so much amazing acting",
+    "bakwaas movie bilkul bekar tha waste of time",
 ]
 
 cols = st.columns(2)
