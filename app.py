@@ -6,8 +6,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
-nltk.download('movie_reviews', quiet=True)
-nltk.download('stopwords', quiet=True)
+import os
+nltk_data_path = os.path.join(os.path.expanduser("~"), "nltk_data")
+os.makedirs(nltk_data_path, exist_ok=True)
+nltk.download('movie_reviews', download_dir=nltk_data_path, quiet=True)
+nltk.download('stopwords', download_dir=nltk_data_path, quiet=True)
+nltk.download('punkt', download_dir=nltk_data_path, quiet=True)
 
 # ── Page Config ────────────────────────────────────────
 st.set_page_config(
