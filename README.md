@@ -5,7 +5,7 @@ using TF-IDF vectorization and Logistic Regression.
 Built with Python and deployed as a live web app using Streamlit.
 
 ## 🔗 Live Demo
-👉 [Click here to try it live](https://YOUR-APP-LINK.streamlit.app)
+👉(https://huggingface.co/spaces/codewithishu/sentiscope)
 
 ## 🏆 Model Performance
 - **Accuracy: 83.50%**
